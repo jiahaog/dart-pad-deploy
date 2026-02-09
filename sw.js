@@ -4,6 +4,7 @@ const CACHE_NAME = 'dartpad-poc-' + VERSION;
 const PRECACHE_URLS = [
   './',
   './index.html',
+  './preview.html',
   './require.js',
   './compiler_bundle.js',
   './assets/dart_sdk.js',
