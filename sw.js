@@ -42,6 +42,14 @@ self.addEventListener('fetch', (event) => {
           caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
         }
         return response;
+      }).catch((err) => {
+        if (event.request.url.endsWith('FontManifest.json')) {
+          return new Response('[]', {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
+        throw err;
       });
     })
   );
