@@ -123,6 +123,15 @@
         output.appendChild(span);
       }
 
+      // Callback when compiler is ready
+      window.onDartCompilerReady = function() {
+        document.getElementById('output').innerHTML =
+          '<span class="success">Compiler ready.</span>\n';
+        var btn = document.getElementById('run-btn');
+        btn.disabled = false;
+        btn.textContent = 'Run';
+      };
+
       // Monitor console.log to capture compiler and program output
       (function() {
         var origLog = console.log;
@@ -153,16 +162,6 @@
           appendOutput('Flutter app started.', 'success');
         }
       });
-
-      // Show ready state when compiler is initialized
-      var readyCheck = setInterval(function() {
-        if (window.dartCompilerReady) {
-          clearInterval(readyCheck);
-          document.getElementById('output').innerHTML =
-            '<span class="success">Compiler ready.</span>\n';
-          document.getElementById('run-btn').disabled = false;
-        }
-      }, 200);
     </script>
   </head>
   <body>
