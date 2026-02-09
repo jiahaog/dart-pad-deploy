@@ -67,7 +67,7 @@
         // This blob is passed to _flutter.loader.loadEntrypoint() so the
         // Flutter engine is properly initialized before runApp().
         var blobScript =
-          'require.config({ baseUrl: "/assets", waitSeconds: 120 });\n' +
+          'require.config({ baseUrl: "./assets", waitSeconds: 120 });\n' +
           'require.undef("' + moduleName + '");\n' +
           '\n' +
           'require(["dart_sdk", "flutter_web"], function(dart_sdk, flutter_web) {\n' +
@@ -93,8 +93,8 @@
         doc.write(
           '<!doctype html>\n<html>\n<head>\n<meta charset="utf-8">\n' +
           '<style>html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; }</style>\n' +
-          '<script src="/require.js"></' + 'script>\n' +
-          '<script src="/assets/flutter.js"></' + 'script>\n' +
+          '<script src="./require.js"></' + 'script>\n' +
+          '<script src="./assets/flutter.js"></' + 'script>\n' +
           '</head>\n<body>\n' +
           '<script>\n' +
           'var blob = new Blob([' + JSON.stringify(blobScript) + '], { type: "text/javascript" });\n' +
@@ -103,7 +103,7 @@
           '  entrypointUrl: blobUrl,\n' +
           '  onEntrypointLoaded: async function(engineInitializer) {\n' +
           '    var appRunner = await engineInitializer.initializeEngine({\n' +
-          '      canvasKitBaseUrl: "/assets/canvaskit/"\n' +
+          '      canvasKitBaseUrl: "./assets/canvaskit/"\n' +
           '    });\n' +
           '    appRunner.runApp();\n' +
           '    window.parent.postMessage({ type: "flutter-ready" }, "*");\n' +
