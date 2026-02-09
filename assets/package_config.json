@@ -855,9 +855,9 @@
     },
     {
       "name": "url_launcher_ios",
-      "rootUri": "file:///Users/jiahao/dev/dart-pad-workspace/dart-pad/pkgs/dart_services/local_pub_cache/hosted/pub.dev/url_launcher_ios-6.3.6",
+      "rootUri": "file:///Users/jiahao/dev/dart-pad-workspace/dart-pad/pkgs/dart_services/local_pub_cache/hosted/pub.dev/url_launcher_ios-6.4.0",
       "packageUri": "lib/",
-      "languageVersion": "3.9"
+      "languageVersion": "3.10"
     },
     {
       "name": "url_launcher_linux",
