@@ -1,9 +1,10 @@
 /* eslint-env serviceworker */
-var CACHE_VERSION = "92cfe249ee2eac30-d97369e8";
+var CACHE_VERSION = "29ab7ba78ea32c2e-289f40ae";
 var CACHE_NAME = "dartpad-compiler-poc-" + CACHE_VERSION;
 
 var PRECACHE_URLS = [
   "./",
+  "./index.html",
   "./assets/AssetManifest.json",
   "./assets/FontManifest.json",
   "./assets/canvaskit/canvaskit.js",
@@ -41,16 +42,20 @@ var PRECACHE_URLS = [
   "./compiler_bundle.js",
   "./compiler_bundle.js.deps",
   "./compiler_bundle.js.map",
-  "./index.html",
   "./preview.html",
   "./require.js"
 ];
 
+function toAbsolute(url) {
+  return new URL(url, self.registration.scope).toString();
+}
+
 self.addEventListener("install", function(event) {
-  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then(function(cache) {
-      return cache.addAll(PRECACHE_URLS);
+      return cache.addAll(PRECACHE_URLS.map(toAbsolute));
+    }).then(function() {
+      return self.skipWaiting();
     })
   );
 });
@@ -67,14 +72,16 @@ self.addEventListener("activate", function(event) {
             return caches.delete(name);
           })
       );
+    }).then(function() {
+      return self.clients.claim();
+    }).then(function() {
+      return self.clients.matchAll({ type: "window", includeUncontrolled: true });
+    }).then(function(clients) {
+      clients.forEach(function(client) {
+        client.postMessage({ type: "sw-ready" });
+      });
     })
   );
-  self.clients.claim();
-  self.clients.matchAll({ type: "window" }).then(function(clients) {
-    clients.forEach(function(client) {
-      client.postMessage({ type: "sw-ready" });
-    });
-  });
 });
 
 self.addEventListener("fetch", function(event) {
@@ -82,17 +89,35 @@ self.addEventListener("fetch", function(event) {
     return;
   }
 
-  event.respondWith(
-    caches.match(event.request).then(function(cached) {
-      if (cached) {
-        return cached;
-      }
-      return fetch(event.request).then(function(response) {
-        var responseClone = response.clone();
-        caches.open(CACHE_NAME).then(function(cache) {
-          cache.put(event.request, responseClone);
+  var url = new URL(event.request.url);
+  if (url.origin !== self.location.origin) {
+    return;
+  }
+
+  if (event.request.mode === "navigate") {
+    event.respondWith(
+      fetch(event.request).catch(function() {
+        return caches.open(CACHE_NAME).then(function(cache) {
+          return cache.match(toAbsolute("./index.html"), { ignoreSearch: true });
         });
-        return response;
+      })
+    );
+    return;
+  }
+
+  event.respondWith(
+    caches.open(CACHE_NAME).then(function(cache) {
+      var cacheKey = url.toString();
+      return cache.match(cacheKey).then(function(cached) {
+        if (cached) {
+          return cached;
+        }
+        return fetch(event.request).then(function(response) {
+          if (response && response.ok) {
+            event.waitUntil(cache.put(cacheKey, response.clone()));
+          }
+          return response;
+        });
       });
     })
   );
