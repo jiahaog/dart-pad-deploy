@@ -1,5 +1,5 @@
 /* eslint-env serviceworker */
-var CACHE_VERSION = "f0ba2812283761d5-d97369e8";
+var CACHE_VERSION = "92cfe249ee2eac30-d97369e8";
 var CACHE_NAME = "dartpad-compiler-poc-" + CACHE_VERSION;
 
 var PRECACHE_URLS = [

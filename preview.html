@@ -10,49 +10,52 @@
     <script src="./assets/flutter.js"></script>
     <script>
       window.addEventListener('load', function() {
-        console.log('preview-ready');
-        window.parent.postMessage({ type: 'preview-ready' }, '*');
+        require.config({ baseUrl: "./assets", waitSeconds: 120 });
+
+        require(["dart_sdk", "flutter_web"], function(dart_sdk, flutter_web) {
+          console.log('preview: dart_sdk and flutter_web preloaded');
+
+          dart_sdk.dart.setStartAsyncSynchronously(true);
+          dart_sdk._isolate_helper.startRootIsolate(function() {}, []);
+          dart_sdk._debugger.registerDevtoolsFormatter();
+
+          window.parent.postMessage({ type: 'preview-ready' }, '*');
+        });
       });
 
       window.addEventListener('message', function(event) {
-        if (!event.data || event.data.type !== 'flutter-run') {
-          return;
+        if (!event.data) return;
+
+        if (event.data.type === 'flutter-run') {
+          handleFlutterRun(event.data.jsCode, event.data.moduleName);
+        } else if (event.data.type === 'flutter-swap') {
+          handleFlutterSwap(event.data.jsCode, event.data.moduleName);
         }
+      });
 
-        if (!window.__flutterPreview) {
-          window.__flutterPreview = { lastRunId: 0, started: false };
-        }
+      function injectAndRequire(jsCode, moduleName, callback) {
+        var cbName = '__mod_cb_' + Date.now();
+        window[cbName] = function(module) {
+          delete window[cbName];
+          callback(module);
+        };
+        var script = document.createElement("script");
+        script.text = jsCode + '\n' +
+          'require(["' + moduleName + '"], window["' + cbName + '"]);\n';
+        document.head.appendChild(script);
+      }
 
-        window.__flutterPreview.lastRunId += 1;
-        var runId = window.__flutterPreview.lastRunId;
-        window.__flutterPreview.started = false;
-
-        var jsCode = event.data.jsCode;
-        var moduleName = event.data.moduleName;
-
-        var blobScript =
+      function handleFlutterRun(jsCode, moduleName) {
+        var entrypointScript = jsCode + '\n' +
           'require.config({ baseUrl: "./assets", waitSeconds: 120 });\n' +
-          'require.undef("' + moduleName + '");\n' +
-          '\n' +
-          'require(["dart_sdk", "flutter_web"], function(dart_sdk, flutter_web) {\n' +
-          '  dart_sdk.dart.setStartAsyncSynchronously(true);\n' +
-          '  dart_sdk._isolate_helper.startRootIsolate(function() {}, []);\n' +
-          '  dart_sdk._debugger.registerDevtoolsFormatter();\n' +
-          '\n' +
-          '  var userCode = ' + JSON.stringify(jsCode) + ';\n' +
-          '  var script = document.createElement("script");\n' +
-          '  script.text = userCode;\n' +
-          '  document.head.appendChild(script);\n' +
-          '\n' +
-          '  require(["' + moduleName + '"], function(module) {\n' +
-          '    var mainLib = module.project__bootstrap || module.project__main || module.main;\n' +
-          '    if (mainLib && mainLib.main) {\n' +
-          '      mainLib.main();\n' +
-          '    }\n' +
-          '  });\n' +
+          'require(["' + moduleName + '"], function(module) {\n' +
+          '  var mainLib = module.project__bootstrap || module.project__main || module.main;\n' +
+          '  if (mainLib && mainLib.main) {\n' +
+          '    mainLib.main();\n' +
+          '  }\n' +
           '});\n';
 
-        var blob = new Blob([blobScript], { type: "text/javascript" });
+        var blob = new Blob([entrypointScript], { type: "text/javascript" });
         var blobUrl = URL.createObjectURL(blob);
         _flutter.loader.loadEntrypoint({
           entrypointUrl: blobUrl,
@@ -61,13 +64,20 @@
               canvasKitBaseUrl: "./assets/canvaskit/"
             });
             appRunner.runApp();
-            if (window.__flutterPreview.lastRunId === runId && !window.__flutterPreview.started) {
-              window.__flutterPreview.started = true;
-              window.parent.postMessage({ type: "flutter-ready" }, "*");
-            }
+            window.parent.postMessage({ type: "flutter-ready" }, "*");
           }
         });
-      });
+      }
+
+      function handleFlutterSwap(jsCode, moduleName) {
+        injectAndRequire(jsCode, moduleName, function(module) {
+          var mainLib = module.project__main || module.main;
+          if (mainLib && mainLib.main) {
+            mainLib.main();
+          }
+          window.parent.postMessage({ type: "flutter-ready" }, "*");
+        });
+      }
     </script>
   </head>
   <body></body>

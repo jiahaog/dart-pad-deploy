@@ -10,7 +10,8 @@
       #editor-pane { flex: 1; display: flex; flex-direction: column; padding: 1rem; border-right: 1px solid #ccc; }
       #right-pane { flex: 1; display: flex; flex-direction: column; }
       #preview-pane { flex: 1; border-bottom: 1px solid #ccc; position: relative; }
-      #preview-frame { width: 100%; height: 100%; border: none; }
+      #preview-frame { width: 100%; height: 100%; border: none; display: none; }
+      #preview-frame.visible { display: block; }
       #output-pane { flex: 1; display: flex; flex-direction: column; padding: 1rem; }
       textarea { flex: 1; padding: 0.5rem; font-family: monospace; border: 1px solid #ccc; }
       button { padding: 0.5rem 1rem; margin: 0.5rem 0; cursor: pointer; background: #007acc; color: white; border: none; border-radius: 4px; }
@@ -20,19 +21,40 @@
       .error { color: #d32f2f; }
       .success { color: #388e3c; }
       h3 { margin-bottom: 0.5rem; }
+      #offline-indicator { position: fixed; bottom: 1rem; right: 1rem; padding: 0.75rem 1.5rem; background: #333; color: white; border-radius: 4px; font-size: 14px; z-index: 1000; display: none; }
+      #offline-indicator.loading { display: block; background: #ff9800; }
+      #offline-indicator.ready { display: block; background: #4caf50; }
+      #offline-indicator::before { content: "⏳"; margin-right: 0.5rem; }
+      #offline-indicator.ready::before { content: "✓"; margin-right: 0.5rem; }
     </style>
     <script>
       if ("serviceWorker" in navigator) {
         window.addEventListener("load", function() {
-          navigator.serviceWorker.register("./service-worker.js").catch(function(err) {
+          showOfflineIndicator("Setting up for offline...");
+          navigator.serviceWorker.register("./service-worker.js").then(function() {
+            if (navigator.serviceWorker.controller) {
+              showOfflineIndicator("Ready for offline", true);
+            }
+          }).catch(function(err) {
             console.warn("Service worker registration failed", err);
           });
         });
         navigator.serviceWorker.addEventListener("message", function(event) {
           if (event.data && event.data.type === "sw-ready") {
-            console.log("sw-ready");
+            showOfflineIndicator("Ready for offline", true);
           }
         });
+      }
+
+      function showOfflineIndicator(text, isReady) {
+        var indicator = document.getElementById('offline-indicator');
+        if (!indicator) {
+          indicator = document.createElement('div');
+          indicator.id = 'offline-indicator';
+          document.body.appendChild(indicator);
+        }
+        indicator.textContent = text;
+        indicator.className = isReady ? 'ready' : 'loading';
       }
 
       require.config({ baseUrl: "./assets", waitSeconds: 120 });
@@ -42,49 +64,94 @@
         document.head.appendChild(s);
       });
 
+      var _warmingUp = false;
+      var _engineReady = false;
+      var _warmupInProgress = false;
+      var _pendingSwap = null;
+      var _previewWindow = null;
+
       function runCode() {
-        if (!window.compileFlutter) {
-          appendOutput('Error: Compiler not loaded yet. Please wait...', 'error');
-          return;
-        }
-        var btn = document.getElementById('run-btn');
-        btn.disabled = true;
-        btn.textContent = 'Compiling...';
+         if (!window.compileFlutter) {
+           appendOutput('Error: Compiler not loaded yet. Please wait...', 'error');
+           return;
+         }
+         var btn = document.getElementById('run-btn');
+         btn.disabled = true;
+         btn.textContent = 'Compiling...';
 
-        var code = document.getElementById('code').value;
-        document.getElementById('output').innerHTML = '';
+         var code = document.getElementById('code').value;
+         document.getElementById('output').innerHTML = '';
 
-        window.compileFlutter(code);
-      }
+         window.compileFlutter(code);
+       }
 
       window.onFlutterCompileResult = function(jsCode, moduleName) {
+        if (_warmingUp) {
+          _warmingUp = false;
+          _warmupInProgress = true;
+          console.log('[compiler-poc] Warmup compiled, sending to preview');
+          sendToPreview('flutter-run', jsCode, moduleName);
+          return;
+        }
+
         appendOutput('Compilation succeeded. Loading Flutter preview...', 'success');
-        setPreviewContent(jsCode, moduleName);
+        
+        // Show iframe when sending compiled JavaScript
+        var iframe = document.getElementById('preview-frame');
+        iframe.classList.add('visible');
+
+        if (_engineReady) {
+          iframe.contentWindow.postMessage({
+            type: 'flutter-swap',
+            jsCode: jsCode,
+            moduleName: moduleName
+          }, '*');
+        } else if (_warmupInProgress) {
+          _pendingSwap = { jsCode: jsCode, moduleName: moduleName };
+        } else {
+          resetPreviewIframe();
+          sendToPreview('flutter-run', jsCode, moduleName);
+        }
 
         var btn = document.getElementById('run-btn');
         btn.disabled = false;
         btn.textContent = 'Run';
       };
 
-      var currentPreviewWindow = null;
-      var pendingPreviewRun = null;
+      function sendToPreview(type, jsCode, moduleName) {
+         var iframe = document.getElementById('preview-frame');
+         _previewWindow = iframe.contentWindow;
 
-      function setPreviewContent(jsCode, moduleName) {
-        var oldIframe = document.getElementById('preview-frame');
+         if (_previewReady) {
+           _previewReady = false;
+           _previewWindow.postMessage({
+             type: type,
+             jsCode: jsCode,
+             moduleName: moduleName
+           }, '*');
+         } else {
+           _pendingMessage = { type: type, jsCode: jsCode, moduleName: moduleName };
+         }
+       }
+
+      function resetPreviewIframe() {
+        _engineReady = false;
+        _previewReady = false;
+        _previewWindow = null;
+        _pendingMessage = null;
+
         var container = document.getElementById('preview-pane');
+        var oldIframe = document.getElementById('preview-frame');
         oldIframe.remove();
 
         var iframe = document.createElement('iframe');
         iframe.id = 'preview-frame';
         iframe.src = './preview.html';
         container.appendChild(iframe);
-
-        currentPreviewWindow = iframe.contentWindow;
-        pendingPreviewRun = {
-          jsCode: jsCode,
-          moduleName: moduleName
-        };
       }
+
+      var _previewReady = false;
+      var _pendingMessage = null;
 
       function appendOutput(text, cls) {
         var output = document.getElementById('output');
@@ -94,13 +161,15 @@
         output.appendChild(span);
       }
 
-      // Callback when compiler is ready
       window.onDartCompilerReady = function() {
         document.getElementById('output').innerHTML =
           '<span class="success">Compiler ready.</span>\n';
         var btn = document.getElementById('run-btn');
         btn.disabled = false;
         btn.textContent = 'Run';
+
+        _warmingUp = true;
+        window.compileFlutter("import 'package:flutter/material.dart'; void main() { runApp(MaterialApp(home: SizedBox())); }");
       };
 
       // Monitor console.log to capture compiler and program output
@@ -125,20 +194,37 @@
         };
       })();
 
-      // Listen for messages from the preview iframe
       window.addEventListener('message', function(e) {
         if (e.data && e.data.type === 'preview-ready') {
-          if (e.source === currentPreviewWindow && pendingPreviewRun) {
-            currentPreviewWindow.postMessage({
-              type: 'flutter-run',
-              jsCode: pendingPreviewRun.jsCode,
-              moduleName: pendingPreviewRun.moduleName
-            }, '*');
+          var iframe = document.getElementById('preview-frame');
+          if (e.source === iframe.contentWindow) {
+            _previewReady = true;
+            console.log('[compiler-poc] Preview iframe ready');
+            if (_pendingMessage) {
+              var msg = _pendingMessage;
+              _pendingMessage = null;
+              _previewReady = false;
+              iframe.contentWindow.postMessage(msg, '*');
+            }
           }
         } else if (e.data && e.data.type === 'flutter-error') {
           appendOutput('Preview error: ' + e.data.message, 'error');
         } else if (e.data && e.data.type === 'flutter-ready') {
-          appendOutput('Flutter app started.', 'success');
+
+          _engineReady = true;
+          _warmupInProgress = false;
+          if (_pendingSwap) {
+            var swap = _pendingSwap;
+            _pendingSwap = null;
+            var iframe = document.getElementById('preview-frame');
+            iframe.contentWindow.postMessage({
+              type: 'flutter-swap',
+              jsCode: swap.jsCode,
+              moduleName: swap.moduleName
+            }, '*');
+          } else {
+            appendOutput('Flutter app started.', 'success');
+          }
         }
       });
     </script>
@@ -168,7 +254,7 @@ void main() {
     </div>
     <div id="right-pane">
       <div id="preview-pane">
-        <iframe id="preview-frame"></iframe>
+        <iframe id="preview-frame" src="./preview.html"></iframe>
       </div>
       <div id="output-pane">
         <h3>Output</h3>
