@@ -69,7 +69,6 @@
       var _warmupInProgress = false;
       var _pendingSwap = null;
       var _previewWindow = null;
-
       function runCode() {
          if (!window.compileFlutter) {
            appendOutput('Error: Compiler not loaded yet. Please wait...', 'error');
@@ -84,6 +83,20 @@
 
          window.compileFlutter(code);
        }
+
+      window.onFlutterCompileError = function(errorMessages) {
+        if (_warmingUp) {
+          _warmingUp = false;
+          console.warn('[compiler-poc] Warmup compile had errors (ignored)');
+          return;
+        }
+        for (var i = 0; i < errorMessages.length; i++) {
+          appendOutput(errorMessages[i], 'error');
+        }
+        var btn = document.getElementById('run-btn');
+        btn.disabled = false;
+        btn.textContent = 'Run';
+      };
 
       window.onFlutterCompileResult = function(jsCode, moduleName) {
         if (_warmingUp) {
