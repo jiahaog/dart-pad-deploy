@@ -1,9 +1,11 @@
 /* eslint-env serviceworker */
-var CACHE_VERSION = "972b52198e1b5eda";
+var CACHE_VERSION = "f0ba2812283761d5-d97369e8";
 var CACHE_NAME = "dartpad-compiler-poc-" + CACHE_VERSION;
 
 var PRECACHE_URLS = [
   "./",
+  "./assets/AssetManifest.json",
+  "./assets/FontManifest.json",
   "./assets/canvaskit/canvaskit.js",
   "./assets/canvaskit/canvaskit.js.symbols",
   "./assets/canvaskit/canvaskit.wasm",
@@ -80,13 +82,6 @@ self.addEventListener("fetch", function(event) {
     return;
   }
 
-  function isFontManifest(url) {
-    return url.indexOf("/assets/FontManifest.json") !== -1;
-  }
-  function isAssetManifest(url) {
-    return url.indexOf("/assets/AssetManifest.json") !== -1;
-  }
-
   event.respondWith(
     caches.match(event.request).then(function(cached) {
       if (cached) {
@@ -98,14 +93,6 @@ self.addEventListener("fetch", function(event) {
           cache.put(event.request, responseClone);
         });
         return response;
-      }).catch(function(err) {
-        if (isFontManifest(event.request.url)) {
-          return new Response("[]", { status: 200, headers: { "Content-Type": "application/json" } });
-        }
-        if (isAssetManifest(event.request.url)) {
-          return new Response("{}", { status: 200, headers: { "Content-Type": "application/json" } });
-        }
-        throw err;
       });
     })
   );
