@@ -22,6 +22,19 @@
       h3 { margin-bottom: 0.5rem; }
     </style>
     <script>
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", function() {
+          navigator.serviceWorker.register("./service-worker.js").catch(function(err) {
+            console.warn("Service worker registration failed", err);
+          });
+        });
+        navigator.serviceWorker.addEventListener("message", function(event) {
+          if (event.data && event.data.type === "sw-ready") {
+            console.log("sw-ready");
+          }
+        });
+      }
+
       require.config({ baseUrl: "./assets", waitSeconds: 120 });
       require(["dart_sdk"], function () {
         var s = document.createElement("script");
@@ -53,6 +66,9 @@
         btn.textContent = 'Run';
       };
 
+      var currentPreviewWindow = null;
+      var pendingPreviewRun = null;
+
       function setPreviewContent(jsCode, moduleName) {
         var oldIframe = document.getElementById('preview-frame');
         var container = document.getElementById('preview-pane');
@@ -60,59 +76,14 @@
 
         var iframe = document.createElement('iframe');
         iframe.id = 'preview-frame';
+        iframe.src = './preview.html';
         container.appendChild(iframe);
 
-        // Build a blob script that sets up require, loads AMD modules,
-        // injects the compiled code, and calls bootstrap.main().
-        // This blob is passed to _flutter.loader.loadEntrypoint() so the
-        // Flutter engine is properly initialized before runApp().
-        var blobScript =
-          'require.config({ baseUrl: "./assets", waitSeconds: 120 });\n' +
-          'require.undef("' + moduleName + '");\n' +
-          '\n' +
-          'require(["dart_sdk", "flutter_web"], function(dart_sdk, flutter_web) {\n' +
-          '  dart_sdk.dart.setStartAsyncSynchronously(true);\n' +
-          '  dart_sdk._isolate_helper.startRootIsolate(function() {}, []);\n' +
-          '  dart_sdk._debugger.registerDevtoolsFormatter();\n' +
-          '\n' +
-          '  var userCode = ' + JSON.stringify(jsCode) + ';\n' +
-          '  var script = document.createElement("script");\n' +
-          '  script.text = userCode;\n' +
-          '  document.head.appendChild(script);\n' +
-          '\n' +
-          '  require(["' + moduleName + '"], function(module) {\n' +
-          '    var mainLib = module.project__bootstrap || module.project__main || module.main;\n' +
-          '    if (mainLib && mainLib.main) {\n' +
-          '      mainLib.main();\n' +
-          '    }\n' +
-          '  });\n' +
-          '});\n';
-
-        var doc = iframe.contentDocument;
-        doc.open();
-        doc.write(
-          '<!doctype html>\n<html>\n<head>\n<meta charset="utf-8">\n' +
-          '<style>html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; }</style>\n' +
-          '<script src="./require.js"></' + 'script>\n' +
-          '<script src="./assets/flutter.js"></' + 'script>\n' +
-          '</head>\n<body>\n' +
-          '<script>\n' +
-          'var blob = new Blob([' + JSON.stringify(blobScript) + '], { type: "text/javascript" });\n' +
-          'var blobUrl = URL.createObjectURL(blob);\n' +
-          '_flutter.loader.loadEntrypoint({\n' +
-          '  entrypointUrl: blobUrl,\n' +
-          '  onEntrypointLoaded: async function(engineInitializer) {\n' +
-          '    var appRunner = await engineInitializer.initializeEngine({\n' +
-          '      canvasKitBaseUrl: "./assets/canvaskit/"\n' +
-          '    });\n' +
-          '    appRunner.runApp();\n' +
-          '    window.parent.postMessage({ type: "flutter-ready" }, "*");\n' +
-          '  }\n' +
-          '});\n' +
-          '</' + 'script>\n' +
-          '</body>\n</html>'
-        );
-        doc.close();
+        currentPreviewWindow = iframe.contentWindow;
+        pendingPreviewRun = {
+          jsCode: jsCode,
+          moduleName: moduleName
+        };
       }
 
       function appendOutput(text, cls) {
@@ -156,7 +127,15 @@
 
       // Listen for messages from the preview iframe
       window.addEventListener('message', function(e) {
-        if (e.data && e.data.type === 'flutter-error') {
+        if (e.data && e.data.type === 'preview-ready') {
+          if (e.source === currentPreviewWindow && pendingPreviewRun) {
+            currentPreviewWindow.postMessage({
+              type: 'flutter-run',
+              jsCode: pendingPreviewRun.jsCode,
+              moduleName: pendingPreviewRun.moduleName
+            }, '*');
+          }
+        } else if (e.data && e.data.type === 'flutter-error') {
           appendOutput('Preview error: ' + e.data.message, 'error');
         } else if (e.data && e.data.type === 'flutter-ready') {
           appendOutput('Flutter app started.', 'success');

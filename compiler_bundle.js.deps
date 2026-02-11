@@ -207,7 +207,6 @@ file:///Users/jiahao/dev/dart-pad-workspace/dart-pad/third_party/dart-sdk/sdk/pk
 file:///Users/jiahao/dev/dart-pad-workspace/dart-pad/third_party/dart-sdk/sdk/pkg/_fe_analyzer_shared/lib/src/type_inference/type_constraint.dart
 file:///Users/jiahao/dev/dart-pad-workspace/dart-pad/third_party/dart-sdk/sdk/pkg/_fe_analyzer_shared/lib/src/types/shared_type.dart
 file:///Users/jiahao/dev/dart-pad-workspace/dart-pad/third_party/dart-sdk/sdk/pkg/_fe_analyzer_shared/lib/src/util/colors.dart
-file:///Users/jiahao/dev/dart-pad-workspace/dart-pad/third_party/dart-sdk/sdk/pkg/_fe_analyzer_shared/lib/src/util/colors_web.dart
 file:///Users/jiahao/dev/dart-pad-workspace/dart-pad/third_party/dart-sdk/sdk/pkg/_fe_analyzer_shared/lib/src/util/dependency_walker.dart
 file:///Users/jiahao/dev/dart-pad-workspace/dart-pad/third_party/dart-sdk/sdk/pkg/_fe_analyzer_shared/lib/src/util/libraries_specification.dart
 file:///Users/jiahao/dev/dart-pad-workspace/dart-pad/third_party/dart-sdk/sdk/pkg/_fe_analyzer_shared/lib/src/util/link.dart
@@ -266,7 +265,6 @@ file:///Users/jiahao/dev/dart-pad-workspace/dart-pad/third_party/dart-sdk/sdk/pk
 file:///Users/jiahao/dev/dart-pad-workspace/dart-pad/third_party/dart-sdk/sdk/pkg/front_end/lib/src/api_prototype/lowering_predicates.dart
 file:///Users/jiahao/dev/dart-pad-workspace/dart-pad/third_party/dart-sdk/sdk/pkg/front_end/lib/src/api_prototype/memory_file_system.dart
 file:///Users/jiahao/dev/dart-pad-workspace/dart-pad/third_party/dart-sdk/sdk/pkg/front_end/lib/src/api_prototype/standard_file_system.dart
-file:///Users/jiahao/dev/dart-pad-workspace/dart-pad/third_party/dart-sdk/sdk/pkg/front_end/lib/src/api_prototype/standard_file_system_web.dart
 file:///Users/jiahao/dev/dart-pad-workspace/dart-pad/third_party/dart-sdk/sdk/pkg/front_end/lib/src/api_prototype/summary_generator.dart
 file:///Users/jiahao/dev/dart-pad-workspace/dart-pad/third_party/dart-sdk/sdk/pkg/front_end/lib/src/api_prototype/terminal_color_support.dart
 file:///Users/jiahao/dev/dart-pad-workspace/dart-pad/third_party/dart-sdk/sdk/pkg/front_end/lib/src/api_unstable/compiler_state.dart
@@ -281,9 +279,7 @@ file:///Users/jiahao/dev/dart-pad-workspace/dart-pad/third_party/dart-sdk/sdk/pk
 file:///Users/jiahao/dev/dart-pad-workspace/dart-pad/third_party/dart-sdk/sdk/pkg/front_end/lib/src/base/configuration.dart
 file:///Users/jiahao/dev/dart-pad-workspace/dart-pad/third_party/dart-sdk/sdk/pkg/front_end/lib/src/base/constant_context.dart
 file:///Users/jiahao/dev/dart-pad-workspace/dart-pad/third_party/dart-sdk/sdk/pkg/front_end/lib/src/base/crash.dart
-file:///Users/jiahao/dev/dart-pad-workspace/dart-pad/third_party/dart-sdk/sdk/pkg/front_end/lib/src/base/crash_web.dart
 file:///Users/jiahao/dev/dart-pad-workspace/dart-pad/third_party/dart-sdk/sdk/pkg/front_end/lib/src/base/directives.dart
-file:///Users/jiahao/dev/dart-pad-workspace/dart-pad/third_party/dart-sdk/sdk/pkg/front_end/lib/src/base/exit_code_stub.dart
 file:///Users/jiahao/dev/dart-pad-workspace/dart-pad/third_party/dart-sdk/sdk/pkg/front_end/lib/src/base/export.dart
 file:///Users/jiahao/dev/dart-pad-workspace/dart-pad/third_party/dart-sdk/sdk/pkg/front_end/lib/src/base/extension_scope.dart
 file:///Users/jiahao/dev/dart-pad-workspace/dart-pad/third_party/dart-sdk/sdk/pkg/front_end/lib/src/base/file_system_dependency_tracker.dart
@@ -439,8 +435,6 @@ file:///Users/jiahao/dev/dart-pad-workspace/dart-pad/third_party/dart-sdk/sdk/pk
 file:///Users/jiahao/dev/dart-pad-workspace/dart-pad/third_party/dart-sdk/sdk/pkg/front_end/lib/src/kernel/implicit_type_argument.dart
 file:///Users/jiahao/dev/dart-pad-workspace/dart-pad/third_party/dart-sdk/sdk/pkg/front_end/lib/src/kernel/internal_ast.dart
 file:///Users/jiahao/dev/dart-pad-workspace/dart-pad/third_party/dart-sdk/sdk/pkg/front_end/lib/src/kernel/invalid_type.dart
-file:///Users/jiahao/dev/dart-pad-workspace/dart-pad/third_party/dart-sdk/sdk/pkg/front_end/lib/src/kernel/io_shim_file_stub.dart
-file:///Users/jiahao/dev/dart-pad-workspace/dart-pad/third_party/dart-sdk/sdk/pkg/front_end/lib/src/kernel/io_shim_stub.dart
 file:///Users/jiahao/dev/dart-pad-workspace/dart-pad/third_party/dart-sdk/sdk/pkg/front_end/lib/src/kernel/kernel_constants.dart
 file:///Users/jiahao/dev/dart-pad-workspace/dart-pad/third_party/dart-sdk/sdk/pkg/front_end/lib/src/kernel/kernel_helper.dart
 file:///Users/jiahao/dev/dart-pad-workspace/dart-pad/third_party/dart-sdk/sdk/pkg/front_end/lib/src/kernel/kernel_target.dart
@@ -519,7 +513,6 @@ file:///Users/jiahao/dev/dart-pad-workspace/dart-pad/third_party/dart-sdk/sdk/pk
 file:///Users/jiahao/dev/dart-pad-workspace/dart-pad/third_party/dart-sdk/sdk/pkg/front_end/lib/src/util/experiment_environment_getter.dart
 file:///Users/jiahao/dev/dart-pad-workspace/dart-pad/third_party/dart-sdk/sdk/pkg/front_end/lib/src/util/helpers.dart
 file:///Users/jiahao/dev/dart-pad-workspace/dart-pad/third_party/dart-sdk/sdk/pkg/front_end/lib/src/util/local_stack.dart
-file:///Users/jiahao/dev/dart-pad-workspace/dart-pad/third_party/dart-sdk/sdk/pkg/front_end/lib/src/util/platform_env_stub.dart
 file:///Users/jiahao/dev/dart-pad-workspace/dart-pad/third_party/dart-sdk/sdk/pkg/front_end/lib/src/util/reference_map.dart
 file:///Users/jiahao/dev/dart-pad-workspace/dart-pad/third_party/dart-sdk/sdk/pkg/front_end/lib/src/util/textual_outline.dart
 file:///Users/jiahao/dev/dart-pad-workspace/dart-pad/third_party/dart-sdk/sdk/pkg/js_shared/lib/synced/async_status_codes.dart
@@ -539,7 +532,6 @@ file:///Users/jiahao/dev/dart-pad-workspace/dart-pad/third_party/dart-sdk/sdk/pk
 file:///Users/jiahao/dev/dart-pad-workspace/dart-pad/third_party/dart-sdk/sdk/pkg/kernel/lib/default_language_version.dart
 file:///Users/jiahao/dev/dart-pad-workspace/dart-pad/third_party/dart-sdk/sdk/pkg/kernel/lib/import_table.dart
 file:///Users/jiahao/dev/dart-pad-workspace/dart-pad/third_party/dart-sdk/sdk/pkg/kernel/lib/kernel.dart
-file:///Users/jiahao/dev/dart-pad-workspace/dart-pad/third_party/dart-sdk/sdk/pkg/kernel/lib/kernel_web_utils.dart
 file:///Users/jiahao/dev/dart-pad-workspace/dart-pad/third_party/dart-sdk/sdk/pkg/kernel/lib/library_index.dart
 file:///Users/jiahao/dev/dart-pad-workspace/dart-pad/third_party/dart-sdk/sdk/pkg/kernel/lib/names.dart
 file:///Users/jiahao/dev/dart-pad-workspace/dart-pad/third_party/dart-sdk/sdk/pkg/kernel/lib/reference_from_index.dart
