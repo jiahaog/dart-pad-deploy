@@ -1,5 +1,5 @@
 /* eslint-env serviceworker */
-var CACHE_VERSION = "9c3e2fac0346d007-289f40ae";
+var CACHE_VERSION = "fa2a4763a055f89d-289f40ae";
 var CACHE_NAME = "dartpad-compiler-poc-" + CACHE_VERSION;
 
 var PRECACHE_URLS = [
@@ -37,6 +37,8 @@ var PRECACHE_URLS = [
   "./assets/flutter.js",
   "./assets/flutter_web.dill",
   "./assets/flutter_web.js",
+  "./assets/fonts/MaterialIcons-Regular.otf",
+  "./assets/fonts/fonts/MaterialIcons-Regular.otf",
   "./assets/libraries.json",
   "./assets/package_config.json",
   "./compiler_worker.js",
