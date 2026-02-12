@@ -3,7 +3,6 @@
   <head>
     <meta charset="utf-8" />
     <title>DartPad Client Compiler POC – Flutter Preview</title>
-    <script src="require.js"></script>
     <style>
       * { box-sizing: border-box; margin: 0; padding: 0; }
       body { font-family: system-ui, -apple-system, sans-serif; display: flex; height: 100vh; }
@@ -17,6 +16,13 @@
       button { padding: 0.5rem 1rem; margin: 0.5rem 0; cursor: pointer; background: #007acc; color: white; border: none; border-radius: 4px; }
       button:disabled { background: #999; cursor: not-allowed; }
       button:hover:not(:disabled) { background: #005a9e; }
+      .toggle-container { display: flex; align-items: center; gap: 0.5rem; margin: 0.5rem 0; font-size: 14px; }
+      .toggle-switch { position: relative; width: 36px; height: 20px; }
+      .toggle-switch input { opacity: 0; width: 0; height: 0; }
+      .toggle-switch .slider { position: absolute; inset: 0; background: #ccc; border-radius: 20px; cursor: pointer; transition: background 0.2s; }
+      .toggle-switch .slider::before { content: ""; position: absolute; left: 2px; top: 2px; width: 16px; height: 16px; background: white; border-radius: 50%; transition: transform 0.2s; }
+      .toggle-switch input:checked + .slider { background: #007acc; }
+      .toggle-switch input:checked + .slider::before { transform: translateX(16px); }
       #output { flex: 1; border: 1px solid #ccc; padding: 0.5rem; background: #f5f5f5; font-family: monospace; font-size: 12px; overflow-y: auto; white-space: pre-wrap; word-wrap: break-word; }
       .error { color: #d32f2f; }
       .success { color: #388e3c; }
@@ -57,20 +63,45 @@
         indicator.className = isReady ? 'ready' : 'loading';
       }
 
-      require.config({ baseUrl: "./assets", waitSeconds: 120 });
-      require(["dart_sdk"], function () {
-        var s = document.createElement("script");
-        s.src = "./compiler_bundle.js";
-        document.head.appendChild(s);
-      });
-
+      var _compilerWorker = new Worker('./compiler_worker.js');
+      var _compilerReady = false;
       var _warmingUp = false;
       var _engineReady = false;
       var _warmupInProgress = false;
       var _pendingSwap = null;
       var _previewWindow = null;
+
+      (function() {
+        var assetsBase = new URL('./assets/', window.location.href).toString();
+        _compilerWorker.postMessage({ type: 'init', assetsBase: assetsBase });
+      })();
+
+      _compilerWorker.onmessage = function(e) {
+        var data = e.data;
+        if (data.type === 'ready') {
+          _compilerReady = true;
+          console.log('[compiler-poc] Compiler ready');
+          document.getElementById('output').innerHTML =
+            '<span class="success">Compiler ready.</span>\n';
+          var btn = document.getElementById('run-btn');
+          btn.disabled = false;
+          btn.textContent = 'Run';
+
+          _warmingUp = true;
+          _compilerWorker.postMessage({
+            type: 'compileFlutter',
+            source: "import 'package:flutter/material.dart'; void main() { runApp(MaterialApp(home: SizedBox())); }"
+          });
+        } else if (data.type === 'compileResult') {
+          console.log('[compiler-poc] JS output length: ' + data.jsCode.length + ' chars');
+          handleCompileResult(data.jsCode, data.moduleName);
+        } else if (data.type === 'compileError') {
+          handleCompileError(data.errors);
+        }
+      };
+
       function runCode() {
-         if (!window.compileFlutter) {
+         if (!_compilerReady) {
            appendOutput('Error: Compiler not loaded yet. Please wait...', 'error');
            return;
          }
@@ -81,10 +112,10 @@
          var code = document.getElementById('code').value;
          document.getElementById('output').innerHTML = '';
 
-         window.compileFlutter(code);
+         _compilerWorker.postMessage({ type: 'compileFlutter', source: code });
        }
 
-      window.onFlutterCompileError = function(errorMessages) {
+      function handleCompileError(errorMessages) {
         if (_warmingUp) {
           _warmingUp = false;
           console.warn('[compiler-poc] Warmup compile had errors (ignored)');
@@ -96,9 +127,9 @@
         var btn = document.getElementById('run-btn');
         btn.disabled = false;
         btn.textContent = 'Run';
-      };
+      }
 
-      window.onFlutterCompileResult = function(jsCode, moduleName) {
+      function handleCompileResult(jsCode, moduleName) {
         if (_warmingUp) {
           _warmingUp = false;
           _warmupInProgress = true;
@@ -109,7 +140,6 @@
 
         appendOutput('Compilation succeeded. Loading Flutter preview...', 'success');
         
-        // Show iframe when sending compiled JavaScript
         var iframe = document.getElementById('preview-frame');
         iframe.classList.add('visible');
 
@@ -129,7 +159,7 @@
         var btn = document.getElementById('run-btn');
         btn.disabled = false;
         btn.textContent = 'Run';
-      };
+      }
 
       function sendToPreview(type, jsCode, moduleName) {
          var iframe = document.getElementById('preview-frame');
@@ -174,38 +204,14 @@
         output.appendChild(span);
       }
 
-      window.onDartCompilerReady = function() {
-        document.getElementById('output').innerHTML =
-          '<span class="success">Compiler ready.</span>\n';
-        var btn = document.getElementById('run-btn');
-        btn.disabled = false;
-        btn.textContent = 'Run';
-
-        _warmingUp = true;
-        window.compileFlutter("import 'package:flutter/material.dart'; void main() { runApp(MaterialApp(home: SizedBox())); }");
-      };
-
-      // Monitor console.log to capture compiler and program output
-      (function() {
-        var origLog = console.log;
-        console.log = function() {
-          origLog.apply(console, arguments);
-          var msg = Array.prototype.slice.call(arguments).join(' ');
-          var output = document.getElementById('output');
-          if (output) {
-            if (msg.indexOf('[compiler-poc]') === 0) {
-              if (msg.indexOf('ERROR') !== -1) {
-                appendOutput(msg, 'error');
-                var btn = document.getElementById('run-btn');
-                btn.disabled = false;
-                btn.textContent = 'Run';
-              }
-            } else {
-              appendOutput(msg, '');
-            }
+      document.addEventListener('DOMContentLoaded', function() {
+        document.getElementById('code').addEventListener('input', function() {
+          if (!document.getElementById('auto-compile-toggle').checked) return;
+          if (!document.getElementById('run-btn').disabled) {
+            runCode();
           }
-        };
-      })();
+        });
+      });
 
       window.addEventListener('message', function(e) {
         if (e.data && e.data.type === 'preview-ready') {
@@ -263,7 +269,16 @@ void main() {
   );
 }
 </textarea>
-      <button id="run-btn" onclick="runCode()" disabled>Loading compiler...</button>
+      <div style="display: flex; align-items: center; gap: 1rem;">
+        <button id="run-btn" onclick="runCode()" disabled>Loading compiler...</button>
+        <label class="toggle-container">
+          <span class="toggle-switch">
+            <input type="checkbox" id="auto-compile-toggle">
+            <span class="slider"></span>
+          </span>
+          Auto-compile
+        </label>
+      </div>
     </div>
     <div id="right-pane">
       <div id="preview-pane">

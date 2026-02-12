@@ -189,7 +189,7 @@
     },
     {
       "name": "ffi",
-      "rootUri": "file:///Users/jiahao/dev/dart-pad-workspace/dart-pad/pkgs/dart_services/local_pub_cache/hosted/pub.dev/ffi-2.1.5",
+      "rootUri": "file:///Users/jiahao/dev/dart-pad-workspace/dart-pad/pkgs/dart_services/local_pub_cache/hosted/pub.dev/ffi-2.2.0",
       "packageUri": "lib/",
       "languageVersion": "3.7"
     },
@@ -933,7 +933,7 @@
     },
     {
       "name": "video_player_avfoundation",
-      "rootUri": "file:///Users/jiahao/dev/dart-pad-workspace/dart-pad/pkgs/dart_services/local_pub_cache/hosted/pub.dev/video_player_avfoundation-2.9.1",
+      "rootUri": "file:///Users/jiahao/dev/dart-pad-workspace/dart-pad/pkgs/dart_services/local_pub_cache/hosted/pub.dev/video_player_avfoundation-2.9.2",
       "packageUri": "lib/",
       "languageVersion": "3.10"
     },
