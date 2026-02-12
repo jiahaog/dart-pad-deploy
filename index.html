@@ -2,15 +2,14 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>DartPad Client Compiler POC – Flutter Preview</title>
+    <title>DartPad Offline Experiment</title>
     <style>
       * { box-sizing: border-box; margin: 0; padding: 0; }
       body { font-family: system-ui, -apple-system, sans-serif; display: flex; height: 100vh; }
       #editor-pane { flex: 1; display: flex; flex-direction: column; padding: 1rem; border-right: 1px solid #ccc; }
       #right-pane { flex: 1; display: flex; flex-direction: column; }
       #preview-pane { flex: 1; border-bottom: 1px solid #ccc; position: relative; }
-      #preview-frame { width: 100%; height: 100%; border: none; display: none; }
-      #preview-frame.visible { display: block; }
+      #preview-frame { width: 100%; height: 100%; border: none; }
       #output-pane { flex: 1; display: flex; flex-direction: column; padding: 1rem; }
       textarea { flex: 1; padding: 0.5rem; font-family: monospace; border: 1px solid #ccc; }
       button { padding: 0.5rem 1rem; margin: 0.5rem 0; cursor: pointer; background: #007acc; color: white; border: none; border-radius: 4px; }
@@ -33,8 +32,22 @@
       #offline-indicator::before { content: "⏳"; margin-right: 0.5rem; }
       #offline-indicator.ready::before { content: "✓"; margin-right: 0.5rem; }
     </style>
+    <style id="preview-mode-style"></style>
     <script>
-      if ("serviceWorker" in navigator) {
+      var _previewMode = false;
+      (function() {
+        var hash = window.location.hash;
+        if (hash.indexOf('#preview=') === 0) {
+          _previewMode = true;
+          document.getElementById('preview-mode-style').textContent =
+            '#editor-pane, #output-pane { display: none !important; }' +
+            'body { display: block !important; }' +
+            '#right-pane { width: 100%; height: 100vh; }' +
+            '#preview-pane { height: 100%; border-bottom: none; }';
+        }
+      })();
+
+      if ("serviceWorker" in navigator && !_previewMode) {
         window.addEventListener("load", function() {
           showOfflineIndicator("Setting up for offline...");
           navigator.serviceWorker.register("./service-worker.js").then(function() {
@@ -53,23 +66,25 @@
       }
 
       function showOfflineIndicator(text, isReady) {
-        var indicator = document.getElementById('offline-indicator');
-        if (!indicator) {
-          indicator = document.createElement('div');
-          indicator.id = 'offline-indicator';
-          document.body.appendChild(indicator);
-        }
-        indicator.textContent = text;
-        indicator.className = isReady ? 'ready' : 'loading';
-      }
+         var indicator = document.getElementById('offline-indicator');
+         if (!indicator) {
+           indicator = document.createElement('div');
+           indicator.id = 'offline-indicator';
+           document.body.appendChild(indicator);
+         }
+         indicator.textContent = text;
+         indicator.className = isReady ? 'ready' : 'loading';
+         
+         if (isReady) {
+           setTimeout(function() {
+             indicator.style.display = 'none';
+           }, 3000);
+         }
+       }
 
       var _compilerWorker = new Worker('./compiler_worker.js');
       var _compilerReady = false;
-      var _warmingUp = false;
       var _engineReady = false;
-      var _warmupInProgress = false;
-      var _pendingSwap = null;
-      var _previewWindow = null;
 
       (function() {
         var assetsBase = new URL('./assets/', window.location.href).toString();
@@ -81,17 +96,19 @@
         if (data.type === 'ready') {
           _compilerReady = true;
           console.log('[compiler-poc] Compiler ready');
-          document.getElementById('output').innerHTML =
-            '<span class="success">Compiler ready.</span>\n';
+          document.getElementById('output').innerHTML = '';
           var btn = document.getElementById('run-btn');
           btn.disabled = false;
           btn.textContent = 'Run';
 
-          _warmingUp = true;
-          _compilerWorker.postMessage({
-            type: 'compileFlutter',
-            source: "import 'package:flutter/material.dart'; void main() { runApp(MaterialApp(home: SizedBox())); }"
-          });
+          if (_previewMode) {
+            var hash = window.location.hash;
+            var encoded = hash.substring('#preview='.length);
+            var code = decodeURIComponent(encoded);
+            document.getElementById('code').value = code;
+          }
+
+          runCode();
         } else if (data.type === 'compileResult') {
           console.log('[compiler-poc] JS output length: ' + data.jsCode.length + ' chars');
           handleCompileResult(data.jsCode, data.moduleName);
@@ -107,7 +124,6 @@
          }
          var btn = document.getElementById('run-btn');
          btn.disabled = true;
-         btn.textContent = 'Compiling...';
 
          var code = document.getElementById('code').value;
          document.getElementById('output').innerHTML = '';
@@ -116,11 +132,6 @@
        }
 
       function handleCompileError(errorMessages) {
-        if (_warmingUp) {
-          _warmingUp = false;
-          console.warn('[compiler-poc] Warmup compile had errors (ignored)');
-          return;
-        }
         for (var i = 0; i < errorMessages.length; i++) {
           appendOutput(errorMessages[i], 'error');
         }
@@ -130,18 +141,7 @@
       }
 
       function handleCompileResult(jsCode, moduleName) {
-        if (_warmingUp) {
-          _warmingUp = false;
-          _warmupInProgress = true;
-          console.log('[compiler-poc] Warmup compiled, sending to preview');
-          sendToPreview('flutter-run', jsCode, moduleName);
-          return;
-        }
-
-        appendOutput('Compilation succeeded. Loading Flutter preview...', 'success');
-        
         var iframe = document.getElementById('preview-frame');
-        iframe.classList.add('visible');
 
         if (_engineReady) {
           iframe.contentWindow.postMessage({
@@ -149,10 +149,7 @@
             jsCode: jsCode,
             moduleName: moduleName
           }, '*');
-        } else if (_warmupInProgress) {
-          _pendingSwap = { jsCode: jsCode, moduleName: moduleName };
         } else {
-          resetPreviewIframe();
           sendToPreview('flutter-run', jsCode, moduleName);
         }
 
@@ -163,11 +160,10 @@
 
       function sendToPreview(type, jsCode, moduleName) {
          var iframe = document.getElementById('preview-frame');
-         _previewWindow = iframe.contentWindow;
 
          if (_previewReady) {
            _previewReady = false;
-           _previewWindow.postMessage({
+           iframe.contentWindow.postMessage({
              type: type,
              jsCode: jsCode,
              moduleName: moduleName
@@ -177,24 +173,23 @@
          }
        }
 
-      function resetPreviewIframe() {
-        _engineReady = false;
-        _previewReady = false;
-        _previewWindow = null;
-        _pendingMessage = null;
-
-        var container = document.getElementById('preview-pane');
-        var oldIframe = document.getElementById('preview-frame');
-        oldIframe.remove();
-
-        var iframe = document.createElement('iframe');
-        iframe.id = 'preview-frame';
-        iframe.src = './preview.html';
-        container.appendChild(iframe);
-      }
-
       var _previewReady = false;
       var _pendingMessage = null;
+
+      function buildShareUrl() {
+        var code = document.getElementById('code').value;
+        var encoded = encodeURIComponent(code);
+        return window.location.origin + window.location.pathname + '#preview=' + encoded;
+      }
+
+      function shareCode() {
+        var url = buildShareUrl();
+        navigator.clipboard.writeText(url).then(function() {
+          var btn = document.getElementById('share-btn');
+          btn.textContent = 'Copied!';
+          setTimeout(function() { btn.textContent = 'Share'; }, 2000);
+        });
+      }
 
       function appendOutput(text, cls) {
         var output = document.getElementById('output');
@@ -218,7 +213,7 @@
           var iframe = document.getElementById('preview-frame');
           if (e.source === iframe.contentWindow) {
             _previewReady = true;
-            console.log('[compiler-poc] Preview iframe ready');
+            console.log('[compiler-poc] preview-ready');
             if (_pendingMessage) {
               var msg = _pendingMessage;
               _pendingMessage = null;
@@ -226,31 +221,24 @@
               iframe.contentWindow.postMessage(msg, '*');
             }
           }
+        } else if (e.data && e.data.type === 'console-log') {
+          appendOutput(e.data.message);
+        } else if (e.data && e.data.type === 'console-error') {
+          appendOutput(e.data.message, 'error');
         } else if (e.data && e.data.type === 'flutter-error') {
           appendOutput('Preview error: ' + e.data.message, 'error');
         } else if (e.data && e.data.type === 'flutter-ready') {
-
           _engineReady = true;
-          _warmupInProgress = false;
-          if (_pendingSwap) {
-            var swap = _pendingSwap;
-            _pendingSwap = null;
-            var iframe = document.getElementById('preview-frame');
-            iframe.contentWindow.postMessage({
-              type: 'flutter-swap',
-              jsCode: swap.jsCode,
-              moduleName: swap.moduleName
-            }, '*');
-          } else {
-            appendOutput('Flutter app started.', 'success');
-          }
+          console.log('[compiler-poc] Flutter app started');
+        } else if (e.data && e.data.type === 'sw-ready') {
+          console.log('sw-ready');
         }
       });
     </script>
   </head>
   <body>
     <div id="editor-pane">
-      <h3>Dart Code</h3>
+      <h3>go/dartpad-offline</h3>
       <textarea id="code">import 'package:flutter/material.dart';
 
 void main() {
@@ -271,9 +259,10 @@ void main() {
 </textarea>
       <div style="display: flex; align-items: center; gap: 1rem;">
         <button id="run-btn" onclick="runCode()" disabled>Loading compiler...</button>
+        <button id="share-btn" onclick="shareCode()">Share</button>
         <label class="toggle-container">
           <span class="toggle-switch">
-            <input type="checkbox" id="auto-compile-toggle">
+            <input type="checkbox" id="auto-compile-toggle" checked>
             <span class="slider"></span>
           </span>
           Auto-compile

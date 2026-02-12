@@ -9,11 +9,32 @@
     <script src="./require.js"></script>
     <script src="./assets/flutter.js"></script>
     <script>
+      (function() {
+        var origLog = console.log;
+        console.log = function() {
+          origLog.apply(console, arguments);
+          var parts = [];
+          for (var i = 0; i < arguments.length; i++) {
+            parts.push(String(arguments[i]));
+          }
+          window.parent.postMessage({ type: 'console-log', message: parts.join(' ') }, '*');
+        };
+
+        window.addEventListener('error', function(e) {
+          var msg = e.error ? String(e.error) : e.message || 'Unknown error';
+          window.parent.postMessage({ type: 'console-error', message: msg }, '*');
+        });
+
+        window.addEventListener('unhandledrejection', function(e) {
+          var msg = e.reason ? String(e.reason) : 'Unhandled promise rejection';
+          window.parent.postMessage({ type: 'console-error', message: msg }, '*');
+        });
+      })();
+
       window.addEventListener('load', function() {
         require.config({ baseUrl: "./assets", waitSeconds: 120 });
 
         require(["dart_sdk", "flutter_web"], function(dart_sdk, flutter_web) {
-          console.log('preview: dart_sdk and flutter_web preloaded');
 
           dart_sdk.dart.setStartAsyncSynchronously(true);
           dart_sdk._isolate_helper.startRootIsolate(function() {}, []);
